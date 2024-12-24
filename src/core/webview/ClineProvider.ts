@@ -640,11 +640,18 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						await this.postStateToWebview()
 						break
 					case "getDefaultSystemPrompt": {
+						// Prevent recursive updates by checking if we already have a system prompt
+						const currentSystemPrompt = await this.getGlobalState("systemPrompt")
+						if (currentSystemPrompt) {
+							break
+						}
+
 						const { apiConfiguration, browserLargeViewport } = await this.getState()
 						const api = buildApiHandler(apiConfiguration)
 						if (!this.mcpHub) {
 							throw new Error("MCP hub not available")
 						}
+						
 						this.outputChannel.appendLine("Getting default system prompt...")
 						const defaultSystemPrompt = await SYSTEM_PROMPT(
 							cwd,
@@ -654,18 +661,18 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 							browserLargeViewport
 						)
 						this.outputChannel.appendLine(`Got default system prompt, length: ${defaultSystemPrompt.length}`)
+						
 						this.outputChannel.appendLine("Getting custom instructions...")
 						const { preferredLanguage } = await this.getState()
 						const finalSystemPrompt = defaultSystemPrompt + await addCustomInstructions('', cwd, preferredLanguage)
 						this.outputChannel.appendLine(`Final system prompt length: ${typeof finalSystemPrompt === 'string' ? finalSystemPrompt.length : 0}`)
+						
 						this.outputChannel.appendLine("Updating system prompt in global state...")
 						await this.updateGlobalState("systemPrompt", finalSystemPrompt)
-						const stateAfterUpdate = await this.getState()
-						this.outputChannel.appendLine(`State after update - systemPrompt length: ${stateAfterUpdate.systemPrompt?.length ?? 0}`)
+						
+						// Post state update only once
 						await this.postStateToWebview()
 						this.outputChannel.appendLine("System prompt updated and posted to webview")
-						const stateToPost = await this.getStateToPostToWebview()
-						this.outputChannel.appendLine(`State posted to webview - systemPrompt length: ${stateToPost.systemPrompt?.length ?? 0}`)
 						break
 					}
 				}
