@@ -6,6 +6,9 @@ import pWaitFor from "p-wait-for"
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildApiHandler } from "../../api"
+import { SYSTEM_PROMPT, addCustomInstructions } from "../prompts/system"
+
+const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop")
 import { downloadTask } from "../../integrations/misc/export-markdown"
 import { openFile, openImage } from "../../integrations/misc/open-file"
 import { selectImages } from "../../integrations/misc/process-images"
@@ -636,6 +639,35 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						await this.updateGlobalState("preferredLanguage", message.text)
 						await this.postStateToWebview()
 						break
+					case "getDefaultSystemPrompt": {
+						const { apiConfiguration, browserLargeViewport } = await this.getState()
+						const api = buildApiHandler(apiConfiguration)
+						if (!this.mcpHub) {
+							throw new Error("MCP hub not available")
+						}
+						this.outputChannel.appendLine("Getting default system prompt...")
+						const defaultSystemPrompt = await SYSTEM_PROMPT(
+							cwd,
+							api.getModel().info.supportsComputerUse ?? false,
+							this.mcpHub,
+							this.cline?.diffStrategy,
+							browserLargeViewport
+						)
+						this.outputChannel.appendLine(`Got default system prompt, length: ${defaultSystemPrompt.length}`)
+						this.outputChannel.appendLine("Getting custom instructions...")
+						const { preferredLanguage } = await this.getState()
+						const finalSystemPrompt = defaultSystemPrompt + await addCustomInstructions('', cwd, preferredLanguage)
+						this.outputChannel.appendLine(`Final system prompt length: ${typeof finalSystemPrompt === 'string' ? finalSystemPrompt.length : 0}`)
+						this.outputChannel.appendLine("Updating system prompt in global state...")
+						await this.updateGlobalState("systemPrompt", finalSystemPrompt)
+						const stateAfterUpdate = await this.getState()
+						this.outputChannel.appendLine(`State after update - systemPrompt length: ${stateAfterUpdate.systemPrompt?.length ?? 0}`)
+						await this.postStateToWebview()
+						this.outputChannel.appendLine("System prompt updated and posted to webview")
+						const stateToPost = await this.getStateToPostToWebview()
+						this.outputChannel.appendLine(`State posted to webview - systemPrompt length: ${stateToPost.systemPrompt?.length ?? 0}`)
+						break
+					}
 				}
 			},
 			null,
@@ -951,9 +983,9 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 	}
 
 	async getStateToPostToWebview() {
-		const { 
-			apiConfiguration, 
-			lastShownAnnouncementId, 
+		const {
+			apiConfiguration,
+			lastShownAnnouncementId,
 			customInstructions,
 			alwaysAllowReadOnly,
 			alwaysAllowWrite,
@@ -966,6 +998,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			soundVolume,
 			browserLargeViewport,
 			preferredLanguage,
+			systemPrompt,
 		} = await this.getState()
 		
 		const allowedCommands = vscode.workspace
@@ -993,6 +1026,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			soundVolume: soundVolume ?? 0.5,
 			browserLargeViewport: browserLargeViewport ?? false,
 			preferredLanguage: preferredLanguage ?? 'English',
+			systemPrompt: await this.getGlobalState("systemPrompt") as string | undefined,
 		}
 	}
 

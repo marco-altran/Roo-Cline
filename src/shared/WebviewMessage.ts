@@ -42,6 +42,7 @@ export interface WebviewMessage {
 		| "fuzzyMatchThreshold"
 		| "preferredLanguage"
 		| "systemPrompt"
+		| "getDefaultSystemPrompt"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

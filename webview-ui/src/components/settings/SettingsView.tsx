@@ -48,6 +48,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 	const [apiErrorMessage, setApiErrorMessage] = useState<string | undefined>(undefined)
 	const [modelIdErrorMessage, setModelIdErrorMessage] = useState<string | undefined>(undefined)
 	const [commandInput, setCommandInput] = useState("")
+
 	const handleSubmit = () => {
 		const apiValidationResult = validateApiConfiguration(apiConfiguration)
 		const modelIdValidationResult = validateModelId(apiConfiguration, openRouterModels)
@@ -82,13 +83,18 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 		setModelIdErrorMessage(undefined)
 	}, [apiConfiguration])
 
-	// Initial validation on mount
+	// Initial validation and system prompt setup on mount
 	useEffect(() => {
 		const apiValidationResult = validateApiConfiguration(apiConfiguration)
 		const modelIdValidationResult = validateModelId(apiConfiguration, openRouterModels)
 		setApiErrorMessage(apiValidationResult)
 		setModelIdErrorMessage(modelIdValidationResult)
-	}, [apiConfiguration, openRouterModels])
+
+		// Request default system prompt if not set
+		if (!systemPrompt) {
+			vscode.postMessage({ type: "getDefaultSystemPrompt" })
+		}
+	}, [apiConfiguration, openRouterModels, systemPrompt])
 
 	const handleResetState = () => {
 		vscode.postMessage({ type: "resetState" })
@@ -145,8 +151,8 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 					<VSCodeTextArea
 						value={systemPrompt ?? ""}
 						style={{ width: "100%" }}
-						rows={8}
-						placeholder="Enter your custom system prompt here. Leave empty to use the default."
+						rows={12}
+						placeholder="Enter your custom system prompt here. Leave empty to use the default system prompt that provides Cline with capabilities for executing commands, reading/writing files, searching code, browser automation, and more."
 						onInput={(e: any) => setSystemPrompt(e.target?.value ?? "")}>
 						<span style={{ fontWeight: "500" }}>System Prompt</span>
 					</VSCodeTextArea>
@@ -156,7 +162,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 							marginTop: "5px",
 							color: "var(--vscode-descriptionForeground)",
 						}}>
-						Override the default system prompt. This defines Cline's core capabilities and behavior. Leave empty to use the default system prompt.
+						The system prompt defines Cline's core capabilities and behavior. Enter your own custom prompt here, or leave it empty to use the default system prompt.
 					</p>
 				</div>
 
