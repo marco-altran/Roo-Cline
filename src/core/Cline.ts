@@ -44,7 +44,7 @@ import { arePathsEqual, getReadablePath } from "../utils/path"
 import { parseMentions } from "./mentions"
 import { AssistantMessageContent, parseAssistantMessage, ToolParamName, ToolUseName } from "./assistant-message"
 import { formatResponse } from "./prompts/responses"
-import { addCustomInstructions, SYSTEM_PROMPT } from "./prompts/system"
+import { addCustomInstructions, getSystemPromptTemplate, resolveSystemPrompt } from "./prompts/system"
 import { truncateHalfConversation } from "./sliding-window"
 import { ClineProvider, GlobalFileNames } from "./webview/ClineProvider"
 import { detectCodeOmission } from "../integrations/editor/detect-omission"
@@ -773,9 +773,21 @@ export class Cline {
 		}
 
 		const { browserLargeViewport, preferredLanguage } = await this.providerRef.deref()?.getState() ?? {}
-		const defaultSystemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsComputerUse ?? false, mcpHub, this.diffStrategy, browserLargeViewport)
-		const finalSystemPrompt = this.systemPrompt ?? defaultSystemPrompt
-		const systemPromptWithInstructions = finalSystemPrompt + await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
+		const rawTemplate = await getSystemPromptTemplate()  // The unchanged literal template
+		const customInstr = await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
+		const combinedTemplate = rawTemplate + customInstr  // combine them as before
+
+		// Then resolve all placeholders:
+		const finalSystemPrompt = resolveSystemPrompt(
+			combinedTemplate,
+			cwd,
+			this.api.getModel().info.supportsComputerUse ?? false,
+			mcpHub,
+			this.diffStrategy,
+			browserLargeViewport
+		)
+
+		// Now finalSystemPrompt is exactly as it used to be under SYSTEM_PROMPT
 
 		// If the previous API request's total token usage is close to the context window, truncate the conversation history to free up space for the new request
 		if (previousApiReqIndex >= 0) {
@@ -794,7 +806,7 @@ export class Cline {
 			}
 		}
 
-		const stream = this.api.createMessage(systemPromptWithInstructions, this.apiConversationHistory)
+		const stream = this.api.createMessage(finalSystemPrompt, this.apiConversationHistory)
 		const iterator = stream[Symbol.asyncIterator]()
 
 		try {

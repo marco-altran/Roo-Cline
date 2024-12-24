@@ -6,7 +6,7 @@ import pWaitFor from "p-wait-for"
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildApiHandler } from "../../api"
-import { SYSTEM_PROMPT, addCustomInstructions } from "../prompts/system"
+import { getSystemPromptTemplate, addCustomInstructions } from "../prompts/system"
 
 const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop")
 import { downloadTask } from "../../integrations/misc/export-markdown"
@@ -642,9 +642,9 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 					case "getDefaultSystemPrompt": {
 						// Prevent recursive updates by checking if we already have a system prompt
 						const currentSystemPrompt = await this.getGlobalState("systemPrompt")
-						if (currentSystemPrompt) {
-							break
-						}
+						// if (currentSystemPrompt) {
+						// 	break
+						// }
 
 						const { apiConfiguration, browserLargeViewport } = await this.getState()
 						const api = buildApiHandler(apiConfiguration)
@@ -653,13 +653,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						}
 						
 						this.outputChannel.appendLine("Getting default system prompt...")
-						const defaultSystemPrompt = await SYSTEM_PROMPT(
-							cwd,
-							api.getModel().info.supportsComputerUse ?? false,
-							this.mcpHub,
-							this.cline?.diffStrategy,
-							browserLargeViewport
-						)
+						const defaultSystemPrompt = await getSystemPromptTemplate()
 						this.outputChannel.appendLine(`Got default system prompt, length: ${defaultSystemPrompt.length}`)
 						
 						this.outputChannel.appendLine("Getting custom instructions...")
