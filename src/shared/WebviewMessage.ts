@@ -41,6 +41,7 @@ export interface WebviewMessage {
 		| "toggleMcpServer"
 		| "fuzzyMatchThreshold"
 		| "preferredLanguage"
+		| "systemPrompt"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse

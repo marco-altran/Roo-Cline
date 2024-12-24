@@ -278,6 +278,7 @@ describe('Cline', () => {
                 mockProvider,
                 mockApiConfig,
                 'custom instructions',
+                'system prompt',
                 false,
                 0.95, // 95% threshold
                 'test task'
@@ -292,6 +293,7 @@ describe('Cline', () => {
                 mockProvider,
                 mockApiConfig,
                 'custom instructions',
+                'system prompt',
                 true,
                 undefined,
                 'test task'
@@ -309,6 +311,7 @@ describe('Cline', () => {
                 mockProvider,
                 mockApiConfig,
                 'custom instructions',
+                'system prompt',
                 true,
                 0.9, // 90% threshold
                 'test task'
@@ -328,6 +331,7 @@ describe('Cline', () => {
                 mockProvider,
                 mockApiConfig,
                 'custom instructions',
+                'system prompt',
                 true,
                 undefined,
                 'test task'
@@ -346,6 +350,7 @@ describe('Cline', () => {
                     mockProvider,
                     mockApiConfig,
                     undefined, // customInstructions
+                    undefined, // systemPrompt
                     false, // diffEnabled
                     undefined, // fuzzyMatchThreshold
                     undefined // task

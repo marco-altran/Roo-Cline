@@ -72,6 +72,7 @@ type GlobalStateKey =
 	| "browserLargeViewport"
 	| "fuzzyMatchThreshold"
 	| "preferredLanguage" // Language setting for Cline's communication
+	| "systemPrompt" // Custom system prompt to override default
 
 export const GlobalFileNames = {
 	apiConversationHistory: "api_conversation_history.json",
@@ -219,6 +220,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		const {
 			apiConfiguration,
 			customInstructions,
+			systemPrompt,
 			diffEnabled,
 			fuzzyMatchThreshold
 		} = await this.getState()
@@ -227,6 +229,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			this,
 			apiConfiguration,
 			customInstructions,
+			systemPrompt,
 			diffEnabled,
 			fuzzyMatchThreshold,
 			task,
@@ -239,6 +242,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 		const {
 			apiConfiguration,
 			customInstructions,
+			systemPrompt,
 			diffEnabled,
 			fuzzyMatchThreshold
 		} = await this.getState()
@@ -247,6 +251,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			this,
 			apiConfiguration,
 			customInstructions,
+			systemPrompt,
 			diffEnabled,
 			fuzzyMatchThreshold,
 			undefined,
@@ -453,6 +458,10 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 						break
 					case "customInstructions":
 						await this.updateCustomInstructions(message.text)
+						break
+					case "systemPrompt":
+						await this.updateGlobalState("systemPrompt", message.text)
+						await this.postStateToWebview()
 						break
 					case "alwaysAllowReadOnly":
 						await this.updateGlobalState("alwaysAllowReadOnly", message.bool ?? undefined)
@@ -1080,6 +1089,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			browserLargeViewport,
 			fuzzyMatchThreshold,
 			preferredLanguage,
+			systemPrompt,
 		] = await Promise.all([
 			this.getGlobalState("apiProvider") as Promise<ApiProvider | undefined>,
 			this.getGlobalState("apiModelId") as Promise<string | undefined>,
@@ -1121,6 +1131,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			this.getGlobalState("browserLargeViewport") as Promise<boolean | undefined>,
 			this.getGlobalState("fuzzyMatchThreshold") as Promise<number | undefined>,
 			this.getGlobalState("preferredLanguage") as Promise<string | undefined>,
+			this.getGlobalState("systemPrompt") as Promise<string | undefined>,
 		])
 
 		let apiProvider: ApiProvider
@@ -1179,6 +1190,7 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			soundVolume,
 			browserLargeViewport: browserLargeViewport ?? false,
 			fuzzyMatchThreshold: fuzzyMatchThreshold ?? 1.0,
+			systemPrompt,
 			preferredLanguage: preferredLanguage ?? (() => {
 				// Get VSCode's locale setting
 				const vscodeLang = vscode.env.language;

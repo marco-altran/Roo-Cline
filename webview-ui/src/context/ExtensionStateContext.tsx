@@ -35,6 +35,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setFuzzyMatchThreshold: (value: number) => void
 	preferredLanguage: string
 	setPreferredLanguage: (value: string) => void
+	systemPrompt?: string
+	setSystemPrompt: (value?: string) => void
 }
 
 const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -157,6 +159,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setBrowserLargeViewport: (value) => setState((prevState) => ({ ...prevState, browserLargeViewport: value })),
 		setFuzzyMatchThreshold: (value) => setState((prevState) => ({ ...prevState, fuzzyMatchThreshold: value })),
 		setPreferredLanguage: (value) => setState((prevState) => ({ ...prevState, preferredLanguage: value })),
+		setSystemPrompt: (value) => setState((prevState) => ({ ...prevState, systemPrompt: value })),
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>

@@ -17,6 +17,8 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 		version,
 		customInstructions,
 		setCustomInstructions,
+		systemPrompt,
+		setSystemPrompt,
 		alwaysAllowReadOnly,
 		setAlwaysAllowReadOnly,
 		alwaysAllowWrite,
@@ -57,6 +59,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 				type: "apiConfiguration",
 				apiConfiguration
 			})
+			vscode.postMessage({ type: "systemPrompt", text: systemPrompt })
 			vscode.postMessage({ type: "customInstructions", text: customInstructions })
 			vscode.postMessage({ type: "alwaysAllowReadOnly", bool: alwaysAllowReadOnly })
 			vscode.postMessage({ type: "alwaysAllowWrite", bool: alwaysAllowWrite })
@@ -136,6 +139,25 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 						apiErrorMessage={apiErrorMessage}
 						modelIdErrorMessage={modelIdErrorMessage}
 					/>
+				</div>
+
+				<div style={{ marginBottom: 5 }}>
+					<VSCodeTextArea
+						value={systemPrompt ?? ""}
+						style={{ width: "100%" }}
+						rows={8}
+						placeholder="Enter your custom system prompt here. Leave empty to use the default."
+						onInput={(e: any) => setSystemPrompt(e.target?.value ?? "")}>
+						<span style={{ fontWeight: "500" }}>System Prompt</span>
+					</VSCodeTextArea>
+					<p
+						style={{
+							fontSize: "12px",
+							marginTop: "5px",
+							color: "var(--vscode-descriptionForeground)",
+						}}>
+						Override the default system prompt. This defines Cline's core capabilities and behavior. Leave empty to use the default system prompt.
+					</p>
 				</div>
 
 				<div style={{ marginBottom: 5 }}>

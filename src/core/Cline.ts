@@ -66,6 +66,7 @@ export class Cline {
 	private browserSession: BrowserSession
 	private didEditFile: boolean = false
 	customInstructions?: string
+	systemPrompt?: string
 	diffStrategy?: DiffStrategy
 	diffEnabled: boolean = false
 
@@ -98,6 +99,7 @@ export class Cline {
 		provider: ClineProvider,
 		apiConfiguration: ApiConfiguration,
 		customInstructions?: string,
+		systemPrompt?: string,
 		enableDiff?: boolean,
 		fuzzyMatchThreshold?: number,
 		task?: string | undefined,
@@ -111,6 +113,7 @@ export class Cline {
 		this.browserSession = new BrowserSession(provider.context)
 		this.diffViewProvider = new DiffViewProvider(cwd)
 		this.customInstructions = customInstructions
+		this.systemPrompt = systemPrompt
 		this.diffEnabled = enableDiff ?? false
 		if (this.diffEnabled && this.api.getModel().id) {
 			this.diffStrategy = getDiffStrategy(this.api.getModel().id, fuzzyMatchThreshold ?? 1.0)
@@ -770,7 +773,9 @@ export class Cline {
 		}
 
 		const { browserLargeViewport, preferredLanguage } = await this.providerRef.deref()?.getState() ?? {}
-		const systemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsComputerUse ?? false, mcpHub, this.diffStrategy, browserLargeViewport) + await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
+		const defaultSystemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsComputerUse ?? false, mcpHub, this.diffStrategy, browserLargeViewport)
+		const finalSystemPrompt = this.systemPrompt ?? defaultSystemPrompt
+		const systemPromptWithInstructions = finalSystemPrompt + await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
 
 		// If the previous API request's total token usage is close to the context window, truncate the conversation history to free up space for the new request
 		if (previousApiReqIndex >= 0) {
@@ -789,7 +794,7 @@ export class Cline {
 			}
 		}
 
-		const stream = this.api.createMessage(systemPrompt, this.apiConversationHistory)
+		const stream = this.api.createMessage(systemPromptWithInstructions, this.apiConversationHistory)
 		const iterator = stream[Symbol.asyncIterator]()
 
 		try {
