@@ -777,66 +777,78 @@ ${joinedInstructions}`
 }
 
 export function resolveSystemPrompt(
-    template: string,
-    cwd: string,
-    supportsComputerUse: boolean,
-    mcpHub: McpHub,
-    diffStrategy?: DiffStrategy,
-    browserLargeViewport?: boolean
+  template: string,
+  cwd: string,
+  supportsComputerUse: boolean,
+  mcpHub: McpHub,
+  diffStrategy?: DiffStrategy,
+  browserLargeViewport?: boolean
 ): string {
-    let resolved = template.replace(/\$\{cwd\.toPosix\(\)\}/g, cwd)
+  let resolved = template.replace(/\$\{cwd\.toPosix\(\)\}/g, cwd)
 
-    resolved = resolved.replace(
-        /\$\{supportsComputerUse([\s\S]*?)\?([\s\S]*?):([\s\S]*?)\}/,
-        (_match, _cond, ifTrue, ifFalse) => (supportsComputerUse ? ifTrue : ifFalse)
-    )
+  resolved = resolved.replace(
+      /\$\{supportsComputerUse([\s\S]*?)\?([\s\S]*?):([\s\S]*?)\}/g,
+      (_match, _cond, ifTrue, ifFalse) => (supportsComputerUse ? ifTrue : ifFalse)
+  )
 
-    resolved = resolved.replace(
-        /\$\{browserLargeViewport \? "1280x800" : "900x600"\}/,
-        browserLargeViewport ? "1280x800" : "900x600"
-    )
+  resolved = resolved.replace(
+      /\$\{browserLargeViewport \? "1280x800" : "900x600"\}/g,
+      browserLargeViewport ? "1280x800" : "900x600"
+  )
 
-    const diffDesc = diffStrategy
-      ? diffStrategy.getToolDescription(cwd)
-      : ""
-    resolved = resolved.replace(
-        /\$\{diffStrategy \? diffStrategy\.getToolDescription\(\$\{cwd\.toPosix\(\)\}\) : ""\}/,
-        diffDesc
-    )
+  resolved = resolved.replace(
+      /\$\{diffStrategy \? diffStrategy\.getToolDescription\(.*\) : ""\}/g,
+      diffStrategy ? diffStrategy.getToolDescription(cwd) : ""
+  )
 
-    const servers = mcpHub.getServers()
-    let mcpServersText = "(No MCP servers currently connected)"
-    if (servers.length > 0) {
-        const connected = servers.filter((s) => s.status === "connected")
-        if (connected.length > 0) {
-            mcpServersText = connected
-                .map((server) => {
-                    const config = JSON.parse(server.config)
-                    const toolLines = (server.tools || []).map((tool) => {
-                        const schemaStr = tool.inputSchema
-                          ? `    Input Schema:\n    ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-                          : ""
-                        return `- ${tool.name}: ${tool.description}\n${schemaStr}`
-                    }).join("\n\n")
-                    const templates = (server.resourceTemplates || [])
-                        .map((t) => `- ${t.uriTemplate} (${t.name}): ${t.description}`)
-                        .join("\n")
-                    const resources = (server.resources || [])
-                        .map((r) => `- ${r.uri} (${r.name}): ${r.description}`)
-                        .join("\n")
+  const servers = mcpHub.getServers()
+  let mcpServersText = "(No MCP servers currently connected)"
+  if (servers.length > 0) {
+      const connected = servers.filter((s) => s.status === "connected")
+      if (connected.length > 0) {
+          mcpServersText = connected
+              .map((server) => {
+                  const config = JSON.parse(server.config)
+                  const toolLines = (server.tools || []).map((tool) => {
+                      const schemaStr = tool.inputSchema
+                        ? `    Input Schema:\n    ${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
+                        : ""
+                      return `- ${tool.name}: ${tool.description}\n${schemaStr}`
+                  }).join("\n\n")
+                  const templates = (server.resourceTemplates || [])
+                      .map((t) => `- ${t.uriTemplate} (${t.name}): ${t.description}`)
+                      .join("\n")
+                  const resources = (server.resources || [])
+                      .map((r) => `- ${r.uri} (${r.name}): ${r.description}`)
+                      .join("\n")
 
-                    return `## ${server.name} (\`${config.command}${config.args && Array.isArray(config.args) ? ` ${config.args.join(" ")}` : ""}\`)` +
-                        (toolLines ? `\n\n### Available Tools\n${toolLines}` : "") +
-                        (templates ? `\n\n### Resource Templates\n${templates}` : "") +
-                        (resources ? `\n\n### Direct Resources\n${resources}` : "")
-                })
-                .join("\n\n")
-        }
-    }
-    resolved = resolved.replace(
-        /\$\{mcpHub\.getServers\(\)\.length > 0([\s\S]*?)\}\s*\}/,
-        mcpServersText
-    )
+                  return `## ${server.name} (\`${config.command}${config.args && Array.isArray(config.args) ? ` ${config.args.join(" ")}` : ""}\`)` +
+                      (toolLines ? `\n\n### Available Tools\n${toolLines}` : "") +
+                      (templates ? `\n\n### Resource Templates\n${templates}` : "") +
+                      (resources ? `\n\n### Direct Resources\n${resources}` : "")
+              })
+              .join("\n\n")
+      }
+  }
+  resolved = resolved.replace(
+      /\$\{mcpHub\.getServers\(\)\.length > 0([\s\S]*?)\}\s*\}/g,
+      (_match, ifTrue) => servers.length > 0 ? ifTrue.replace(/^\n+/, '').trim() : "(No MCP servers currently connected)"
+  )
 
-    return resolved
+  resolved = resolved.replace(/\$\{mcpHub\.getServers\(\)[\s\S]*?\}/g, mcpServersText)
+  
+  resolved = resolved.replace(
+      /\$\{osName\(\)\}/g,
+      osName()
+  )
+  resolved = resolved.replace(
+      /\$\{defaultShell\}/g,
+      defaultShell
+  )
+  resolved = resolved.replace(
+      /\$\{os\.homedir\(\)\.toPosix\(\)\}/g,
+      os.homedir().toPosix()
+  )
+
+  return resolved
 }
