@@ -124,6 +124,10 @@ export class AnthropicHandler implements ApiHandler {
           }
         }
 
+        let accumulatedText = "";
+        let currentBlockText = "";
+        let isFirstBlock = true;
+
         for await (const chunk of stream) {
           switch (chunk.type) {
             case "message_start":
@@ -135,37 +139,40 @@ export class AnthropicHandler implements ApiHandler {
               };
               break;
             case "message_delta":
-              usage.outputTokens += chunk.usage.output_tokens || 0;
+              if (chunk.usage?.output_tokens) {
+                usage.outputTokens += chunk.usage.output_tokens;
+              }
               break;
             case "message_stop":
+              // If there's any remaining text, yield it
+              if (accumulatedText) {
+                yield {
+                  type: "text",
+                  text: accumulatedText,
+                };
+              }
               break;
             case "content_block_start":
               switch (chunk.content_block.type) {
                 case "text":
-                  if (chunk.index > 0) {
-                    yield {
-                      type: "text",
-                      text: "\n",
-                    };
+                  if (!isFirstBlock) {
+                    accumulatedText += "\n";
                   }
-                  yield {
-                    type: "text",
-                    text: chunk.content_block.text,
-                  };
+                  currentBlockText = chunk.content_block.text || "";
+                  isFirstBlock = false;
                   break;
               }
               break;
             case "content_block_delta":
               switch (chunk.delta.type) {
                 case "text_delta":
-                  yield {
-                    type: "text",
-                    text: chunk.delta.text,
-                  };
+                  currentBlockText += chunk.delta.text;
                   break;
               }
               break;
             case "content_block_stop":
+              accumulatedText += currentBlockText;
+              currentBlockText = "";
               break;
           }
         }
