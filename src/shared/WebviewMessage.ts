@@ -5,6 +5,12 @@ export type AudioType = "notification" | "celebration" | "progress_loop"
 export interface WebviewMessage {
 	type:
 		| "apiConfiguration"
+		| "currentApiConfigName"
+		| "upsertApiConfiguration"
+		| "deleteApiConfiguration"
+		| "loadApiConfiguration"
+		| "renameApiConfiguration"
+		| "getListApiConfiguration"
 		| "customInstructions"
 		| "allowedCommands"
 		| "alwaysAllowReadOnly"
@@ -27,20 +33,35 @@ export interface WebviewMessage {
 		| "openFile"
 		| "openMention"
 		| "cancelTask"
+		| "refreshGlamaModels"
 		| "refreshOpenRouterModels"
+		| "refreshOpenAiModels"
 		| "alwaysAllowBrowser"
 		| "alwaysAllowMcp"
 		| "playSound"
 		| "soundEnabled"
 		| "soundVolume"
 		| "diffEnabled"
-		| "browserLargeViewport"
+		| "browserViewportSize"
+		| "screenshotQuality"
 		| "openMcpSettings"
 		| "restartMcpServer"
 		| "toggleToolAlwaysAllow"
 		| "toggleMcpServer"
 		| "fuzzyMatchThreshold"
 		| "preferredLanguage"
+		| "writeDelayMs"
+		| "enhancePrompt"
+		| "enhancedPrompt"
+		| "draggedImages"
+		| "deleteMessage"
+		| "terminalOutputLineLimit"
+		| "mcpEnabled"
+		| "searchCommits"
+		| "alwaysApproveResubmit"
+		| "requestDelaySeconds"
+		| "setApiConfigPassword"
+		| "mode"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -50,10 +71,12 @@ export interface WebviewMessage {
 	value?: number
 	commands?: string[]
 	audioType?: AudioType
-	// For toggleToolAutoApprove
 	serverName?: string
 	toolName?: string
 	alwaysAllow?: boolean
+	dataUrls?: string[]
+	values?: Record<string, any>
+	query?: string
 }
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"

@@ -1,20 +1,55 @@
 # Roo-Cline
 
-A fork of Cline, an autonomous coding agent, tweaked for more speed and flexibility. It’s been mainly writing itself recently, with a light touch of human guidance here and there.
+A fork of Cline, an autonomous coding agent, with some additional experimental features. It’s been mainly writing itself recently, with a light touch of human guidance here and there.
 
-## Features
+## New in 3.0 - chat modes!
 
-- Automatically approve commands, browsing, file writing, and MCP tools
-- Faster, more targeted edits via diffs (even on big files)
-- Detects and fixes missing code chunks
-- `.clinerules` for project-specific instructions
+You can now choose between different prompts for Roo Cline to better suit your workflow. Here’s what’s available:
+
+- **Code:** (existing behavior): The default mode where Cline helps you write code and execute tasks.
+
+- **Architect:** "You are Cline, a software architecture expert..." Ideal for thinking through high-level technical design and system architecture. Can’t write code or run commands.
+
+- **Ask:** "You are Cline, a knowledgeable technical assistant..." Perfect for asking questions about the codebase or digging into concepts. Also can’t write code or run commands.
+
+**Switching Modes:**
+It’s super simple! There’s a dropdown in the bottom left of the chat input to switch modes. Right next to it, you’ll find a way to switch between the API configuration profiles associated with the current mode (configured on the settings screen).
+
+**Why Add This?**
+- It keeps Cline from being overly eager to jump into solving problems when you just want to think or ask questions.
+- Each mode remembers the API configuration you last used with it. For example, you can use more thoughtful models like OpenAI o1 for Architect and Ask, while sticking with Sonnet or DeepSeek for coding tasks.
+- It builds on research suggesting better results when separating "thinking" from "coding," explained well in this very thoughtful [article](https://aider.chat/2024/09/26/architect.html) from aider.
+
+Right now, switching modes is a manual process. In the future, we’d love to give Cline the ability to suggest mode switches based on context. For now, we’d really appreciate your feedback on this feature.
+
+Give it a try and let us know what you think in the reddit: https://www.reddit.com/r/roocline 🚀
+
+## Experimental Features
+
+- Different chat modes for coding, architecting code, and asking questions about the codebase
 - Drag and drop images into chats
+- Delete messages from chats
+- @-mention Git commits to include their context in the chat
+- Save different API configurations to quickly switch between providers and settings
+- "Enhance prompt" button (OpenRouter models only for now)
 - Sound effects for feedback
-- Option to use a larger 1280x800 browser
+- Option to use browsers of different sizes and adjust screenshot quality
 - Quick prompt copying from history
 - OpenRouter compression support
+- Includes current time in the system prompt
+- Uses a file system watcher to more reliably watch for file system changes
 - Language selection for Cline's communication (English, Japanese, Spanish, French, German, and more)
-- Support for newer Gemini models (gemini-exp-1206, gemini-2.0-flash-exp, gemini-2.0-flash-thinking-exp-1219) and Meta 3, 3.1, and 3.2 models via AWS Bedrock
+- Support for DeepSeek V3
+- Support for Amazon Nova and Meta 3, 3.1, and 3.2 models via AWS Bedrock
+- Support for Glama
+- Support for listing models from OpenAI-compatible providers
+- Support for adding OpenAI-compatible models with or without streaming
+- Per-tool MCP auto-approval
+- Enable/disable individual MCP servers
+- Enable/disable the MCP feature overall
+- Automatically retry failed API requests with a configurable delay
+- Configurable delay after auto-writes to allow diagnostics to detect potential problems
+- Control the number of terminal output lines to pass to the model when executing commands
 - Runs alongside the original Cline
 
 ## Disclaimer
@@ -28,7 +63,7 @@ Here's an example of Roo-Cline autonomously creating a snake game with "Always a
 https://github.com/user-attachments/assets/c2bb31dc-e9b2-4d73-885d-17f1471a4987
 
 ## Contributing
-To contribute to the project, start by exploring [open issues](https://github.com/RooVetGit/Roo-Cline/issues) or checking our [feature request board](https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop). We'd also love to have you join our [Discord](https://discord.gg/cline) to share ideas and connect with other contributors.
+To contribute to the project, start by exploring [open issues](https://github.com/RooVetGit/Roo-Cline/issues) or checking our [feature request board](https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop). We'd also love to have you join the [Roo Cline Reddit](https://www.reddit.com/r/roocline/) and the [Cline Discord](https://discord.gg/cline) to share ideas and connect with other contributors.
 
 <details>
 <summary>Local Setup</summary>
@@ -80,12 +115,9 @@ Once your merge is successful:
 
 </details>
 
-## Stay Updated!
-Subscribe to our [Github releases](https://github.com/RooVetGit/Roo-Cline/releases) to keep up with the latest updates! You can also view our [CHANGELOG.md](Roo-Cline/CHANGELOG.md) for more details.
-
 ---
 
-# Cline (prev. Claude Dev) – \#1 on OpenRouter
+# Cline (prev. Claude Dev) – [#1 on OpenRouter](https://openrouter.ai/)
 
 <p align="center">
   <img src="https://media.githubusercontent.com/media/cline/cline/main/assets/docs/demo.gif" width="100%" />
@@ -95,7 +127,7 @@ Subscribe to our [Github releases](https://github.com/RooVetGit/Roo-Cline/releas
 <table>
 <tbody>
 <td align="center">
-<a href="https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline" target="_blank"><strong>Download on VS Marketplace</strong></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev" target="_blank"><strong>Download on VS Marketplace</strong></a>
 </td>
 <td align="center">
 <a href="https://discord.gg/cline" target="_blank"><strong>Join the Discord</strong></a>
@@ -120,10 +152,10 @@ Thanks to [Claude 3.5 Sonnet's agentic coding capabilities](https://www-cdn.ant
     - Create and edit files + monitor linter/compiler errors along the way, letting him proactively fix issues like missing imports and syntax errors on his own.
     - Execute commands directly in your terminal and monitor their output as he works, letting him e.g., react to dev server issues after editing a file.
     - For web development tasks, Cline can launch the site in a headless browser, click, type, scroll, and capture screenshots + console logs, allowing him to fix runtime errors and visual bugs.
-4. When a task is completed, Cline will present the result to you with a terminal command like `open -a "Google Chrome" index.html`, which you run with a click of a button.
+4. When a task is completed, Cline will present the result to you with a terminal command like `open -a "Google Chrome" index.html`, which you run with a click of a button.
 
 > [!TIP]
-> Use the `CMD/CTRL + Shift + P` shortcut to open the command palette and type "Cline: Open In New Tab" to open the extension as a tab in your editor. This lets you use Cline side-by-side with your file explorer, and see how he changes your workspace more clearly.
+> Use the `CMD/CTRL + Shift + P` shortcut to open the command palette and type "Cline: Open In New Tab" to open the extension as a tab in your editor. This lets you use Cline side-by-side with your file explorer, and see how he changes your workspace more clearly.
 
 ---
 
@@ -131,7 +163,7 @@ Thanks to [Claude 3.5 Sonnet's agentic coding capabilities](https://www-cdn.ant
 
 ### Use any API and Model
 
-Cline supports API providers like OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, and GCP Vertex. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available. The extension also now supports Amazon Nova and Meta Llama (3, 3.1, and 3.2) models via AWS Bedrock.
+Cline supports API providers like OpenRouter, Anthropic, Glama, OpenAI, Google Gemini, AWS Bedrock, Azure, and GCP Vertex. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
 
 The extension also keeps track of total tokens and API usage cost for the entire task loop and individual requests, keeping you informed of spend every step of the way.
 

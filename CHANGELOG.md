@@ -1,5 +1,98 @@
 # Roo Cline Changelog
 
+## [3.0.3]
+
+-   Update required vscode engine to ^1.84.0 to match cline
+
+## [3.0.2]
+
+-   A couple more tiny tweaks to the button alignment in the chat input
+
+## [3.0.1]
+
+-   Fix the reddit link and a small visual glitch in the chat input
+
+## [3.0.0]
+
+-   This release adds chat modes! Now you can ask Roo Cline questions about system architecture or the codebase without immediately jumping into writing code. You can even assign different API configuration profiles to each mode if you prefer to use different models for thinking vs coding. Would love feedback in the new Roo Cline Reddit! https://www.reddit.com/r/roocline
+
+## [2.2.46]
+
+-   Only parse @-mentions in user input (not in files)
+
+## [2.2.45]
+
+-   Save different API configurations to quickly switch between providers and settings (thanks @samhvw8!)
+
+## [2.2.44]
+
+-   Automatically retry failed API requests with a configurable delay (thanks @RaySinner!)
+
+## [2.2.43]
+
+-   Allow deleting single messages or all subsequent messages
+
+## [2.2.42]
+
+-   Add a Git section to the context mentions
+
+## [2.2.41]
+
+-   Checkbox to disable streaming for OpenAI-compatible providers
+
+## [2.2.40]
+
+-   Add the Glama provider (thanks @punkpeye!)
+
+## [2.2.39]
+
+-   Add toggle to enable/disable the MCP-related sections of the system prompt (thanks @daniel-lxs!)
+
+## [2.2.38]
+
+-   Add a setting to control the number of terminal output lines to pass to the model when executing commands
+
+## [2.2.36 - 2.2.37]
+
+-   Add a button to delete user messages
+
+## [2.2.35]
+
+-   Allow selection of multiple browser viewport sizes and adjusting screenshot quality
+
+## [2.2.34]
+
+-   Add the DeepSeek provider
+
+## [2.2.33]
+
+-   "Enhance prompt" button (OpenRouter models only for now)
+-   Support listing models for OpenAI compatible providers (thanks @samhvw8!)
+
+## [2.2.32]
+
+-   More efficient workspace tracker
+
+## [2.2.31]
+
+-   Improved logic for auto-approving chained commands
+
+## [2.2.30]
+
+-   Fix bug with auto-approving commands
+
+## [2.2.29]
+
+-   Add configurable delay after auto-writes to allow diagnostics to catch up
+
+## [2.2.28]
+
+-   Use createFileSystemWatcher to more reliably update list of files to @-mention
+
+## [2.2.27]
+
+-   Add the current time to the system prompt and improve browser screenshot quality (thanks @libertyteeth!)
+
 ## [2.2.26]
 
 -   Tweaks to preferred language (thanks @yongjer)

@@ -4,6 +4,9 @@ import { useExtensionState } from "../../context/ExtensionStateContext"
 import { validateApiConfiguration, validateModelId } from "../../utils/validate"
 import { vscode } from "../../utils/vscode"
 import ApiOptions from "./ApiOptions"
+import McpEnabledToggle from "../mcp/McpEnabledToggle"
+import ApiConfigManager from "./ApiConfigManager"
+import { Mode } from "../../../../src/shared/modes"
 
 const IS_DEV = false // FIXME: use flags when packaging
 
@@ -33,22 +36,39 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 		setSoundVolume,
 		diffEnabled,
 		setDiffEnabled,
-		browserLargeViewport,
-		setBrowserLargeViewport,
+		browserViewportSize,
+		setBrowserViewportSize,
 		openRouterModels,
+		glamaModels,
 		setAllowedCommands,
 		allowedCommands,
 		fuzzyMatchThreshold,
 		setFuzzyMatchThreshold,
 		preferredLanguage,
 		setPreferredLanguage,
+		writeDelayMs,
+		setWriteDelayMs,
+		screenshotQuality,
+		setScreenshotQuality,
+		terminalOutputLineLimit,
+		setTerminalOutputLineLimit,
+		mcpEnabled,
+		alwaysApproveResubmit,
+		setAlwaysApproveResubmit,
+		requestDelaySeconds,
+		setRequestDelaySeconds,
+		currentApiConfigName,
+		listApiConfigMeta,
+		mode,
+		setMode,
 	} = useExtensionState()
 	const [apiErrorMessage, setApiErrorMessage] = useState<string | undefined>(undefined)
 	const [modelIdErrorMessage, setModelIdErrorMessage] = useState<string | undefined>(undefined)
 	const [commandInput, setCommandInput] = useState("")
+
 	const handleSubmit = () => {
 		const apiValidationResult = validateApiConfiguration(apiConfiguration)
-		const modelIdValidationResult = validateModelId(apiConfiguration, openRouterModels)
+		const modelIdValidationResult = validateModelId(apiConfiguration, glamaModels, openRouterModels)
 
 		setApiErrorMessage(apiValidationResult)
 		setModelIdErrorMessage(modelIdValidationResult)
@@ -67,9 +87,22 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 			vscode.postMessage({ type: "soundEnabled", bool: soundEnabled })
 			vscode.postMessage({ type: "soundVolume", value: soundVolume })
 			vscode.postMessage({ type: "diffEnabled", bool: diffEnabled })
-			vscode.postMessage({ type: "browserLargeViewport", bool: browserLargeViewport })
+			vscode.postMessage({ type: "browserViewportSize", text: browserViewportSize })
 			vscode.postMessage({ type: "fuzzyMatchThreshold", value: fuzzyMatchThreshold ?? 1.0 })
 			vscode.postMessage({ type: "preferredLanguage", text: preferredLanguage })
+			vscode.postMessage({ type: "writeDelayMs", value: writeDelayMs })
+			vscode.postMessage({ type: "screenshotQuality", value: screenshotQuality ?? 75 })
+			vscode.postMessage({ type: "terminalOutputLineLimit", value: terminalOutputLineLimit ?? 500 })
+			vscode.postMessage({ type: "mcpEnabled", bool: mcpEnabled })
+			vscode.postMessage({ type: "alwaysApproveResubmit", bool: alwaysApproveResubmit })
+			vscode.postMessage({ type: "requestDelaySeconds", value: requestDelaySeconds })
+			vscode.postMessage({ type: "currentApiConfigName", text: currentApiConfigName })
+			vscode.postMessage({
+				type: "upsertApiConfiguration",
+				text: currentApiConfigName,
+				apiConfiguration
+			})
+			vscode.postMessage({ type: "mode", text: mode })
 			onDone()
 		}
 	}
@@ -82,10 +115,10 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 	// Initial validation on mount
 	useEffect(() => {
 		const apiValidationResult = validateApiConfiguration(apiConfiguration)
-		const modelIdValidationResult = validateModelId(apiConfiguration, openRouterModels)
+		const modelIdValidationResult = validateModelId(apiConfiguration, glamaModels, openRouterModels)
 		setApiErrorMessage(apiValidationResult)
 		setModelIdErrorMessage(modelIdValidationResult)
-	}, [apiConfiguration, openRouterModels])
+	}, [apiConfiguration, glamaModels, openRouterModels])
 
 	const handleResetState = () => {
 		vscode.postMessage({ type: "resetState" })
@@ -125,14 +158,45 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 					marginBottom: "17px",
 					paddingRight: 17,
 				}}>
+
 				<h3 style={{ color: "var(--vscode-foreground)", margin: 0 }}>Settings</h3>
 				<VSCodeButton onClick={handleSubmit}>Done</VSCodeButton>
 			</div>
 			<div
 				style={{ flexGrow: 1, overflowY: "scroll", paddingRight: 8, display: "flex", flexDirection: "column" }}>
 				<div style={{ marginBottom: 5 }}>
+					<h3 style={{ color: "var(--vscode-foreground)", margin: 0, marginBottom: 15 }}>Provider Settings</h3>
+					<ApiConfigManager
+						currentApiConfigName={currentApiConfigName}
+						listApiConfigMeta={listApiConfigMeta}
+						onSelectConfig={(configName: string) => {
+							vscode.postMessage({
+								type: "loadApiConfiguration",
+								text: configName
+							})
+						}}
+						onDeleteConfig={(configName: string) => {
+							vscode.postMessage({
+								type: "deleteApiConfiguration",
+								text: configName
+							})
+						}}
+						onRenameConfig={(oldName: string, newName: string) => {
+							vscode.postMessage({
+								type: "renameApiConfiguration",
+								values: { oldName, newName },
+								apiConfiguration
+							})
+						}}
+						onUpsertConfig={(configName: string) => {
+							vscode.postMessage({
+								type: "upsertApiConfiguration",
+								text: configName,
+								apiConfiguration
+							})
+						}}
+					/>
 					<ApiOptions
-						showModelOptions={true}
 						apiErrorMessage={apiErrorMessage}
 						modelIdErrorMessage={modelIdErrorMessage}
 					/>
@@ -140,6 +204,39 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 
 				<div style={{ marginBottom: 5 }}>
 					<div style={{ marginBottom: 15 }}>
+						<h3 style={{ color: "var(--vscode-foreground)", margin: 0, marginBottom: 15 }}>Agent Settings</h3>
+
+						<div style={{ marginBottom: 15 }}>
+							<label style={{ fontWeight: "500", display: "block", marginBottom: 5 }}>Agent Mode</label>
+							<select
+								value={mode}
+								onChange={(e) => {
+									const value = e.target.value as Mode
+									setMode(value)
+									vscode.postMessage({ type: "mode", text: value })
+								}}
+								style={{
+									width: "100%",
+									padding: "4px 8px",
+									backgroundColor: "var(--vscode-input-background)",
+									color: "var(--vscode-input-foreground)",
+									border: "1px solid var(--vscode-input-border)",
+									borderRadius: "2px",
+									height: "28px"
+								}}>
+								<option value="code">Code</option>
+								<option value="architect">Architect</option>
+								<option value="ask">Ask</option>
+							</select>
+							<p style={{
+								fontSize: "12px",
+								marginTop: "5px",
+								color: "var(--vscode-descriptionForeground)",
+							}}>
+								Select the mode that best fits your needs. Code mode focuses on implementation details, Architect mode on high-level design, and Ask mode on asking questions about the codebase.
+							</p>
+						</div>
+
 						<label style={{ fontWeight: "500", display: "block", marginBottom: 5 }}>Preferred Language</label>
 						<select
 							value={preferredLanguage}
@@ -199,6 +296,33 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 						}}>
 						These instructions are added to the end of the system prompt sent with every request. Custom instructions set in .clinerules and .cursorrules in the working directory are also included.
 					</p>
+
+					<McpEnabledToggle />
+				</div>
+
+				<div style={{ marginBottom: 5 }}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+						<span style={{ fontWeight: "500", minWidth: '150px' }}>Terminal output limit</span>
+						<input
+							type="range"
+							min="100"
+							max="5000"
+							step="100"
+							value={terminalOutputLineLimit ?? 500}
+							onChange={(e) => setTerminalOutputLineLimit(parseInt(e.target.value))}
+							style={{
+								flexGrow: 1,
+								accentColor: 'var(--vscode-button-background)',
+								height: '2px'
+							}}
+						/>
+						<span style={{ minWidth: '45px', textAlign: 'left' }}>
+							{terminalOutputLineLimit ?? 500}
+						</span>
+					</div>
+					<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
+						Maximum number of lines to include in terminal output when executing commands. When exceeded lines will be removed from the middle, saving tokens.
+					</p>
 				</div>
 
 				<div style={{ marginBottom: 5 }}>
@@ -220,7 +344,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 								<span style={{ fontWeight: "500", minWidth: '100px' }}>Match precision</span>
 								<input
 									type="range"
-									min="0.9"
+									min="0.8"
 									max="1"
 									step="0.005"
 									value={fuzzyMatchThreshold ?? 1.0}
@@ -261,7 +385,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 					</p>
 				</div>
 
-				<div style={{ marginBottom: 5, border: "2px solid var(--vscode-errorForeground)", borderRadius: "4px", padding: "10px" }}>
+				<div style={{ marginBottom: 15, border: "2px solid var(--vscode-errorForeground)", borderRadius: "4px", padding: "10px" }}>
 					<h4 style={{ fontWeight: 500, margin: "0 0 10px 0", color: "var(--vscode-errorForeground)" }}>⚠️ High-Risk Auto-Approve Settings</h4>
 					<p style={{ fontSize: "12px", marginBottom: 15, color: "var(--vscode-descriptionForeground)" }}>
 						The following settings allow Cline to automatically perform potentially dangerous operations without requiring approval.
@@ -277,6 +401,31 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 						<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
 							Automatically create and edit files without requiring approval
 						</p>
+						{alwaysAllowWrite && (
+							<div style={{ marginTop: 10 }}>
+								<div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+									<input
+										type="range"
+										min="0"
+										max="5000"
+										step="100"
+										value={writeDelayMs}
+										onChange={(e) => setWriteDelayMs(parseInt(e.target.value))}
+										style={{
+											flex: 1,
+											accentColor: 'var(--vscode-button-background)',
+											height: '2px'
+										}}
+									/>
+									<span style={{ minWidth: '45px', textAlign: 'left' }}>
+										{writeDelayMs}ms
+									</span>
+								</div>
+								<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
+									Delay after writes to allow diagnostics to detect potential problems
+								</p>
+							</div>
+						)}
 					</div>
 
 					<div style={{ marginBottom: 5 }}>
@@ -286,18 +435,51 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 							<span style={{ fontWeight: "500" }}>Always approve browser actions</span>
 						</VSCodeCheckbox>
 						<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
-							Automatically perform browser actions without requiring approval<br/>
+							Automatically perform browser actions without requiring approval<br />
 							Note: Only applies when the model supports computer use
 						</p>
 					</div>
 
 					<div style={{ marginBottom: 5 }}>
 						<VSCodeCheckbox
+							checked={alwaysApproveResubmit}
+							onChange={(e: any) => setAlwaysApproveResubmit(e.target.checked)}>
+							<span style={{ fontWeight: "500" }}>Always retry failed API requests</span>
+						</VSCodeCheckbox>
+						<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
+							Automatically retry failed API requests when server returns an error response
+						</p>
+						{alwaysApproveResubmit && (
+							<div style={{ marginTop: 10 }}>
+								<div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+									<input
+										type="range"
+										min="0"
+										max="100"
+										step="1"
+										value={requestDelaySeconds}
+										onChange={(e) => setRequestDelaySeconds(parseInt(e.target.value))}
+										style={{
+											flex: 1,
+											accentColor: 'var(--vscode-button-background)',
+											height: '2px'
+										}}
+									/>
+									<span style={{ minWidth: '45px', textAlign: 'left' }}>
+										{requestDelaySeconds}s
+									</span>
+								</div>
+								<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
+									Delay before retrying the request
+								</p>
+							</div>
+						)}
+					</div>
+
+					<div style={{ marginBottom: 5 }}>
+						<VSCodeCheckbox
 							checked={alwaysAllowMcp}
-							onChange={(e: any) => {
-								setAlwaysAllowMcp(e.target.checked)
-								vscode.postMessage({ type: "alwaysAllowMcp", bool: e.target.checked })
-							}}>
+							onChange={(e: any) => setAlwaysAllowMcp(e.target.checked)}>
 							<span style={{ fontWeight: "500" }}>Always approve MCP tools</span>
 						</VSCodeCheckbox>
 						<p style={{ fontSize: "12px", marginTop: "5px", color: "var(--vscode-descriptionForeground)" }}>
@@ -394,24 +576,69 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 				</div>
 
 				<div style={{ marginBottom: 5 }}>
-					<h4 style={{ fontWeight: 500, marginBottom: 10 }}>Experimental Features</h4>
-
 					<div style={{ marginBottom: 10 }}>
-						<VSCodeCheckbox checked={browserLargeViewport} onChange={(e: any) => setBrowserLargeViewport(e.target.checked)}>
-							<span style={{ fontWeight: "500" }}>Use larger browser viewport (1280x800)</span>
-						</VSCodeCheckbox>
-						<p
-							style={{
+						<div style={{ marginBottom: 15 }}>
+							<h3 style={{ color: "var(--vscode-foreground)", margin: 0, marginBottom: 15 }}>Browser Settings</h3>
+							<label style={{ fontWeight: "500", display: "block", marginBottom: 5 }}>Viewport size</label>
+							<select
+								value={browserViewportSize}
+								onChange={(e) => setBrowserViewportSize(e.target.value)}
+								style={{
+									width: "100%",
+									padding: "4px 8px",
+									backgroundColor: "var(--vscode-input-background)",
+									color: "var(--vscode-input-foreground)",
+									border: "1px solid var(--vscode-input-border)",
+									borderRadius: "2px",
+									height: "28px"
+								}}>
+								<option value="1280x800">Large Desktop (1280x800)</option>
+								<option value="900x600">Small Desktop (900x600)</option>
+								<option value="768x1024">Tablet (768x1024)</option>
+								<option value="360x640">Mobile (360x640)</option>
+							</select>
+							<p style={{
 								fontSize: "12px",
 								marginTop: "5px",
 								color: "var(--vscode-descriptionForeground)",
 							}}>
-							When enabled, Cline will use a larger viewport size for browser interactions.
-						</p>
+								Select the viewport size for browser interactions. This affects how websites are displayed and interacted with.
+							</p>
+						</div>
+
+						<div style={{ marginBottom: 15 }}>
+							<div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+								<span style={{ fontWeight: "500", minWidth: '100px' }}>Screenshot quality</span>
+								<input
+									type="range"
+									min="1"
+									max="100"
+									step="1"
+									value={screenshotQuality ?? 75}
+									onChange={(e) => setScreenshotQuality(parseInt(e.target.value))}
+									style={{
+										flexGrow: 1,
+										accentColor: 'var(--vscode-button-background)',
+										height: '2px'
+									}}
+								/>
+								<span style={{ minWidth: '35px', textAlign: 'left' }}>
+									{screenshotQuality ?? 75}%
+								</span>
+							</div>
+							<p style={{
+								fontSize: "12px",
+								marginTop: "5px",
+								color: "var(--vscode-descriptionForeground)",
+							}}>
+								Adjust the WebP quality of browser screenshots. Higher values provide clearer screenshots but increase token usage.
+							</p>
+						</div>
 					</div>
 
 					<div style={{ marginBottom: 5 }}>
 						<div style={{ marginBottom: 10 }}>
+							<h3 style={{ color: "var(--vscode-foreground)", margin: 0, marginBottom: 15 }}>Notification Settings</h3>
 							<VSCodeCheckbox checked={soundEnabled} onChange={(e: any) => setSoundEnabled(e.target.checked)}>
 								<span style={{ fontWeight: "500" }}>Enable sound effects</span>
 							</VSCodeCheckbox>
@@ -440,9 +667,10 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 											accentColor: 'var(--vscode-button-background)',
 											height: '2px'
 										}}
+										aria-label="Volume"
 									/>
 									<span style={{ minWidth: '35px', textAlign: 'left' }}>
-										{Math.round((soundVolume ?? 0.5) * 100)}%
+										{((soundVolume ?? 0.5) * 100).toFixed(0)}%
 									</span>
 								</div>
 							</div>
@@ -479,7 +707,10 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 					<p style={{ wordWrap: "break-word", margin: 0, padding: 0 }}>
 						If you have any questions or feedback, feel free to open an issue at{" "}
 						<VSCodeLink href="https://github.com/RooVetGit/Roo-Cline" style={{ display: "inline" }}>
-							https://github.com/RooVetGit/Roo-Cline
+							github.com/RooVetGit/Roo-Cline
+						</VSCodeLink> or join {" "}
+						<VSCodeLink href="https://www.reddit.com/r/roocline/" style={{ display: "inline" }}>
+							reddit.com/r/roocline
 						</VSCodeLink>
 					</p>
 					<p style={{ fontStyle: "italic", margin: "10px 0 0 0", padding: 0 }}>v{version}</p>

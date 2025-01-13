@@ -12,8 +12,9 @@ import { ApiStream } from "../transform/stream"
 import { initializeLangSmith, wrapOpenAIClient, traceableMethod } from "../langsmith/config"
 
 export class OpenAiHandler implements ApiHandler {
-  private options: ApiHandlerOptions
-  private client: OpenAI
+	protected options: ApiHandlerOptions
+	private client: OpenAI
+
 
   constructor(options: ApiHandlerOptions) {
     this.options = options
@@ -34,31 +35,67 @@ export class OpenAiHandler implements ApiHandler {
       }))
     }
 
-    // Bind the method to preserve 'this' context
-    this.createMessage = this.createMessage.bind(this)
-  }
+	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+		const modelInfo = this.getModel().info
+		const modelId = this.options.openAiModelId ?? ""
 
-  // Include stream_options for OpenAI Compatible providers if the checkbox is checked
-  async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
-    const tracedMethod = traceableMethod(async function*(
-      this: OpenAiHandler,
-      systemPrompt: string,
-      messages: Anthropic.Messages.MessageParam[]
-    ): ApiStream {
-      const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
-        ...convertToOpenAiMessages(messages),
-      ]
-      const requestOptions: OpenAI.Chat.ChatCompletionCreateParams = {
-        model: this.options.openAiModelId ?? "",
-        messages: openAiMessages,
-        temperature: 0,
-        stream: true,
-      }
+		if (this.options.openAiStreamingEnabled ?? true) {
+			const systemMessage: OpenAI.Chat.ChatCompletionSystemMessageParam = {
+				role: "system",
+				content: systemPrompt
+			}
+			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+				model: modelId,
+				temperature: 0,
+				messages: [systemMessage, ...convertToOpenAiMessages(messages)],
+				stream: true as const,
+				stream_options: { include_usage: true },
+			}
+			if (this.options.includeMaxTokens) {
+				requestOptions.max_tokens = modelInfo.maxTokens
+			}
 
-      if (this.options.includeStreamOptions ?? true) {
-        requestOptions.stream_options = { include_usage: true }
-      }
+			const stream = await this.client.chat.completions.create(requestOptions)
+
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta
+				if (delta?.content) {
+					yield {
+						type: "text",
+						text: delta.content,
+					}
+				}
+				if (chunk.usage) {
+					yield {
+						type: "usage",
+						inputTokens: chunk.usage.prompt_tokens || 0,
+						outputTokens: chunk.usage.completion_tokens || 0,
+					}
+				}
+			}
+		} else {
+			// o1 for instance doesnt support streaming, non-1 temp, or system prompt
+			const systemMessage: OpenAI.Chat.ChatCompletionUserMessageParam = {
+				role: "user",
+				content: systemPrompt
+			}
+			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+				model: modelId,
+				messages: [systemMessage, ...convertToOpenAiMessages(messages)],
+			}
+			const response = await this.client.chat.completions.create(requestOptions)
+			
+			yield {
+				type: "text",
+				text: response.choices[0]?.message.content || "",
+			}
+			yield {
+				type: "usage",
+				inputTokens: response.usage?.prompt_tokens || 0,
+				outputTokens: response.usage?.completion_tokens || 0,
+			}
+		}
+	}
 
       const stream = await this.client.chat.completions.create(requestOptions)
       for await (const chunk of stream) {

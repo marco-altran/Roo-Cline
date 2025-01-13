@@ -10,7 +10,9 @@ module.exports = {
                 "moduleResolution": "node",
                 "esModuleInterop": true,
                 "allowJs": true
-            }
+            },
+            diagnostics: false,
+            isolatedModules: true
         }]
     },
     testMatch: ['**/__tests__/**/*.test.ts'],
@@ -29,11 +31,11 @@ module.exports = {
     transformIgnorePatterns: [
         'node_modules/(?!(@modelcontextprotocol|delay|p-wait-for|globby|serialize-error|strip-ansi|default-shell|os-name)/)'
     ],
-    setupFiles: [],
-    globals: {
-        'ts-jest': {
-            diagnostics: false,
-            isolatedModules: true
-        }
-    }
-};
+    modulePathIgnorePatterns: [
+        '.vscode-test'
+    ],
+    reporters: [
+        ["jest-simple-dot-reporter", {}]
+    ],
+    setupFiles: []
+}
